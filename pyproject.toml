@@ -6,11 +6,33 @@ build-backend = "setuptools.build_meta"
 name = "packetforge"
 version = "0.1.0"
 description = "AI network analysis tool library + MCP server for authorized penetration testing"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "PacketForge contributors" }]
+keywords = ["wireshark", "tshark", "nmap", "pcap", "mcp", "penetration-testing", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
 dependencies = [
     "fastmcp>=2.0",
     "pydantic>=2.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/xiabai2008/PacketForge"
+Issues = "https://github.com/xiabai2008/PacketForge/issues"
 
 [project.optional-dependencies]
 dev = [
