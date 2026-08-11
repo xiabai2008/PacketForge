@@ -107,8 +107,11 @@ def test_decode_output_utf8():
 
 
 def test_decode_output_falls_back_to_locale(monkeypatch):
+    import locale
+
     from packetforge.interfaces.tshark_interface import _decode_output
 
+    monkeypatch.setattr(locale, "getpreferredencoding", lambda *a: "gbk")
     gbk_bytes = "本地连接".encode("gbk")
     assert _decode_output(gbk_bytes) == "本地连接"
 
