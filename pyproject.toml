@@ -38,7 +38,8 @@ Issues = "https://github.com/xiabai2008/PacketForge/issues"
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "ruff>=0.4",
+    # pinned to minor: newer ruff majors add rules that break CI mid-iteration
+    "ruff~=0.16",
 ]
 
 [tool.setuptools.packages.find]

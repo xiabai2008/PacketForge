@@ -1,10 +1,9 @@
 """Tests for structured output of remaining nmap scan tools."""
 
-from tests.test_nmap_structured import SAMPLE_XML
-
 from packetforge.core.audit import AuditLog
 from packetforge.core.security import RateLimiter
 from packetforge.tools.nmap_scan import NmapScanTools
+from tests.test_nmap_structured import SAMPLE_XML
 
 
 def make_tools():
