@@ -45,9 +45,15 @@ core/security.py（输入校验/沙箱/限速）→ 审计记录（哈希链）
 | 模块 | 具体能力 | 吸收自 | 复用资产 |
 |------|---------|--------|---------|
 | 抓包与分析 | 实时抓包(BPF)、PCAP/PCAPNG 分析、协议统计、TCP/UDP 流重组、JSON/CSV 导出 | Wireshark-MCP 模块化 + WireMCP tshark 封装 | 全新 |
-| Nmap 主动扫描 | SYN/connect/UDP、服务版本、OS 指纹、NSE 漏洞脚本、快速/全面扫描 | Wireshark-MCP | 复用 rayscan 扫描底座 |
-| 威胁情报联动 | URLhaus/AbuseIPDB 查恶意 IP、整包威胁扫描 | Wireshark-MCP + WireMCP | 复用 poxiao 情报库 |
+| Nmap 主动扫描 | SYN/connect/UDP、服务版本、OS 指纹、NSE 漏洞脚本、快速/全面扫描 | Wireshark-MCP | 全新实现（见下方更正） |
+| 威胁情报联动 | URLhaus/AbuseIPDB 查恶意 IP、整包威胁扫描 | Wireshark-MCP + WireMCP | 全新实现（见下方更正） |
 | 明文凭据提取 | HTTP Basic Auth / FTP / Telnet 凭据 | WireMCP（独有优势） | 全新 |
+
+> **2026-08-11 更正**：原设计中"复用 rayscan（Nmap 底座）"与"复用 poxiao（情报库）"
+> 的假设经代码勘察不成立——rayscan 实为 Web 应用漏洞扫描器（`wvs` 包，无 Nmap API），
+> poxiao 实为 SRC 侦察工具链（`src` 包，无 URLhaus/AbuseIPDB API）。
+> 因此 Nmap 与威胁情报模块为全新实现；两底座的可选集成（poxiao `IPCollector` IP 富化、
+> rayscan `WAVScanner` Web 漏洞验证）列入 ROADMAP 后续评估。
 
 ## 5. 目录结构
 

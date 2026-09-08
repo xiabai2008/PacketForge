@@ -61,6 +61,29 @@ def test_validate_file_path_rejects_escape(tmp_path):
         validate_file_path(str(tmp_path / ".." / "etc" / "passwd"))
 
 
+def test_validate_output_path_ok(tmp_path):
+    from packetforge.core.security import validate_output_path
+
+    target = tmp_path / "out.pcapng"
+    assert validate_output_path(str(target)) == str(target.resolve())
+
+
+def test_validate_output_path_rejects_extension(tmp_path):
+    from packetforge.core.security import validate_output_path
+
+    with pytest.raises(SecurityError):
+        validate_output_path(str(tmp_path / "out.exe"))
+    with pytest.raises(SecurityError):
+        validate_output_path(str(tmp_path / "noext"))
+
+
+def test_validate_output_path_rejects_missing_parent(tmp_path):
+    from packetforge.core.security import validate_output_path
+
+    with pytest.raises(SecurityError):
+        validate_output_path(str(tmp_path / "no_such_dir" / "out.pcap"))
+
+
 def test_rate_limiter_blocks():
     rl = RateLimiter(max_calls=2, window_seconds=60)
     assert rl.allow("nmap")

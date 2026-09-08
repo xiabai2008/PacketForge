@@ -28,6 +28,34 @@ def test_extract_ftp_credentials():
     )
 
 
+def test_extract_ftp_credentials_at_text_start():
+    # USER/PASS at the very beginning of the payload (no leading newline)
+    text = "USER bob\nPASS pwd123\n"
+    creds = extract_credentials_from_text(text)
+    assert any(
+        c["type"] == "ftp" and c["user"] == "bob" and c["password"] == "pwd123"
+        for c in creds
+    )
+
+
+def test_extract_telnet_credentials():
+    text = "User Access Verification\n\nUsername: admin\nPassword: hunter2\n"
+    creds = extract_credentials_from_text(text)
+    assert any(
+        c["type"] == "telnet" and c["user"] == "admin" and c["password"] == "hunter2"
+        for c in creds
+    )
+
+
+def test_extract_telnet_login_prompt():
+    text = "\nlogin: root\nPassword: toor\nLast login: never"
+    creds = extract_credentials_from_text(text)
+    assert any(
+        c["type"] == "telnet" and c["user"] == "root" and c["password"] == "toor"
+        for c in creds
+    )
+
+
 def test_creds_tools_ok_redacts_password(monkeypatch, tmp_path):
     p = tmp_path / "a.pcap"
     p.write_bytes(b"x" * 24)

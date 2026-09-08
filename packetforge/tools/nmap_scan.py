@@ -96,3 +96,23 @@ class NmapScanTools:
         except Exception as e:
             aid = self.audit.record("nmap_quick_scan_error", {"error": str(e)})
             return format_error("nmap_quick_scan", str(e), aid)
+
+    def nmap_vulnerability_scan(self, target: str, ports: str = ""):
+        if not self._guard():
+            return format_error(
+                "nmap_vulnerability_scan",
+                "rate limit exceeded",
+                self.audit.record("nmap_rate_limited", {}),
+            )
+        try:
+            validate_ip_or_cidr(target)
+            if ports:
+                validate_port_spec(ports)
+            raw = self.nmap.vulnerability_scan(target, ports)
+            aid = self.audit.record(
+                "nmap_vulnerability_scan", {"target": target, "ports": ports}
+            )
+            return format_result("nmap_vulnerability_scan", {"raw": raw}, aid)
+        except Exception as e:
+            aid = self.audit.record("nmap_vulnerability_scan_error", {"error": str(e)})
+            return format_error("nmap_vulnerability_scan", str(e), aid)

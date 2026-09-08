@@ -2,7 +2,11 @@
 
 from packetforge.core.audit import AuditLog
 from packetforge.core.output_formatter import format_error, format_result
-from packetforge.core.security import RateLimiter, validate_file_path
+from packetforge.core.security import (
+    RateLimiter,
+    validate_file_path,
+    validate_output_path,
+)
 from packetforge.interfaces.tshark_interface import TsharkError, TsharkInterface
 
 
@@ -41,6 +45,7 @@ class CaptureTools:
         capture_filter: str = "",
         timeout: int = 30,
         fmt: str = "json",
+        save_to: str = "",
     ):
         if not interface:
             aid = self.audit.record(
@@ -48,15 +53,20 @@ class CaptureTools:
             )
             return format_error("capture_live", "interface is required", aid)
         try:
+            write_path = validate_output_path(save_to) if save_to else None
             raw = self.tshark.capture_live(
-                interface, count, capture_filter, timeout, fmt
+                interface, count, capture_filter, timeout, fmt, write_path=write_path
             )
             aid = self.audit.record(
-                "capture_live", {"interface": interface, "count": count}
+                "capture_live",
+                {"interface": interface, "count": count, "saved_to": write_path or ""},
             )
-            return format_result(
-                "capture_live", {"raw": raw, "interface": interface}, aid
-            )
+            data = {"interface": interface}
+            if write_path:
+                data["saved_to"] = write_path
+            else:
+                data["raw"] = raw
+            return format_result("capture_live", data, aid)
         except Exception as e:
             aid = self.audit.record("capture_live_error", {"error": str(e)})
             return format_error("capture_live", str(e), aid)
@@ -66,6 +76,8 @@ class CaptureTools:
     ):
         try:
             path = validate_file_path(filepath)
+            # fail fast on filter syntax errors before the real read
+            self.tshark.check_display_filter(display_filter)
             raw = self.tshark.analyze_pcap(path, display_filter, max_packets)
             aid = self.audit.record("analyze_pcap_file", {"filepath": path})
             return format_result("analyze_pcap_file", {"raw": raw}, aid)

@@ -121,3 +121,46 @@ def test_decode_output_undecodable(monkeypatch):
 
     # invalid in both utf-8 and any locale; must not raise
     assert _decode_output(b"\xff\xfe\x00\x01") is not None
+
+
+def test_check_display_filter_skips_when_unavailable(monkeypatch):
+    itf = TsharkInterface()
+    monkeypatch.setattr(itf, "is_available", lambda: False)
+    called = {}
+
+    def fake_run(cmd):
+        called["yes"] = True
+
+    monkeypatch.setattr(itf, "_run", fake_run)
+    itf.check_display_filter("http.request")
+    assert "yes" not in called
+
+
+def test_check_display_filter_empty_is_noop(monkeypatch):
+    itf = TsharkInterface()
+    monkeypatch.setattr(itf, "is_available", lambda: True)
+    monkeypatch.setattr(
+        itf, "_run", lambda cmd: (_ for _ in ()).throw(AssertionError("should not run"))
+    )
+    itf.check_display_filter("")
+    itf.check_display_filter(None)
+
+
+def test_check_display_filter_valid(monkeypatch):
+    itf = TsharkInterface()
+    monkeypatch.setattr(itf, "is_available", lambda: True)
+    monkeypatch.setattr(itf, "_run", lambda cmd: "")
+    itf.check_display_filter("http.request")
+
+
+def test_check_display_filter_invalid(monkeypatch):
+    itf = TsharkInterface()
+    monkeypatch.setattr(itf, "is_available", lambda: True)
+
+    def fake_run(cmd):
+        raise TsharkError('"bogus!!" is not a valid display filter')
+
+    monkeypatch.setattr(itf, "_run", fake_run)
+    with pytest.raises(TsharkError) as exc:
+        itf.check_display_filter("bogus!!")
+    assert "not a valid display filter" in str(exc.value)

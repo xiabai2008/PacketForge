@@ -3,10 +3,12 @@
 import ipaddress
 import json
 import ssl
+import urllib.parse
 import urllib.request
 from typing import Any
 
 _URLHAUS_HOST = "https://urlhaus-api.abuse.ch/v1/host/"
+_ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
 
 
 def _default_ssl_context() -> ssl.SSLContext:
@@ -47,7 +49,11 @@ class ThreatIntelInterface:
             ipaddress.ip_address(ip)
         except ValueError:
             return {"status": "error", "error": f"invalid IP: {ip!r}"}
-        return self._query(ip)
+        result = self._query(ip)
+        abuse = self._query_abuseipdb(ip)
+        if abuse is not None:
+            result["abuseipdb"] = abuse
+        return result
 
     def _query(self, ip: str) -> dict[str, Any]:
         payload = json.dumps({"host": ip}).encode("utf-8")
@@ -66,3 +72,29 @@ class ThreatIntelInterface:
         except Exception as e:
             # Degrade gracefully: mark as unchecked, do not fail the workflow
             return {"status": "degraded", "ip": ip, "error": str(e), "checked": False}
+
+    def _query_abuseipdb(self, ip: str) -> dict[str, Any] | None:
+        """Query AbuseIPDB. Returns None when no key is configured."""
+        if not self.abuseipdb_key:
+            return None
+        url = (
+            _ABUSEIPDB_URL
+            + "?"
+            + urllib.parse.urlencode({"ipAddress": ip, "maxAgeInDays": 90})
+        )
+        req = urllib.request.Request(
+            url,
+            headers={"Key": self.abuseipdb_key, "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10, context=_SSL_CONTEXT) as resp:
+                data = json.loads(resp.read().decode())
+            d = data.get("data", {})
+            return {
+                "checked": True,
+                "abuse_confidence_score": d.get("abuseConfidenceScore"),
+                "total_reports": d.get("totalReports"),
+            }
+        except Exception as e:
+            # Degraded but do not break the main flow
+            return {"checked": False, "error": str(e)}

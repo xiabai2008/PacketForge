@@ -47,10 +47,14 @@ python -m mcp_server.server
 # 在 Claude Desktop / Cursor 的 MCP 配置中指向该命令
 ```
 
-注册的工具（10 个）：`capture_live`、`analyze_pcap_file`、`get_protocol_statistics`、
-`follow_tcp_stream`、`export_packets_json`、`nmap_port_scan`、`nmap_service_detection`、
-`extract_credentials`、`check_ip_threat_intel`、`scan_capture_for_threats`。
+注册的工具（11 个）：`capture_live`（支持 `save_to` 落盘）、`analyze_pcap_file`、
+`get_protocol_statistics`、`follow_tcp_stream`、`export_packets_json`、`nmap_port_scan`、
+`nmap_service_detection`、`nmap_vulnerability_scan`、`extract_credentials`、
+`check_ip_threat_intel`、`scan_capture_for_threats`。
 另有资源 `network://help` 与提示词 `security_audit` / `incident_response`。
+
+传输方式：默认 stdio（`python -m mcp_server.server`），支持远程部署
+`python -m mcp_server.server --transport http --host 0.0.0.0 --port 8000`。
 
 ## 作为库直接调用 / Use as a Library
 
@@ -72,8 +76,9 @@ print(result)
 
 | 项 | 说明 |
 |---|---|
-| `ThreatIntelInterface(urlhaus_key=...)` | URLhaus API 现已强制 Auth-Key（免费申请：abuse.ch Authentication Portal）。未配置时查询自动降级为 `degraded`，不阻断主流程 |
-| `RateLimiter(max_calls, window_seconds)` | Nmap 限速（默认 10 次/小时），可调 |
+| `ThreatIntelInterface(urlhaus_key=..., abuseipdb_key=...)` | URLhaus 与 AbuseIPDB 均需免费 API key（abuse.ch Portal / abuseipdb.com）。未配置的源自动跳过或降级，不阻断主流程 |
+| `AuditLog(path="audit.jsonl")` | 审计链持久化（JSONL）；重启自动重放校验，篡改文件加载即抛错 |
+| `RateLimiter(max_calls, window_seconds)` | Nmap 限速（默认 10 次/小时），线程安全 |
 | `TsharkInterface(binary=...)` / `NmapInterface(binary=...)` | 自定义二进制路径 |
 
 ## 安全设计 / Security Design

@@ -2,11 +2,19 @@
 
 import locale
 import shutil
+import struct
 import subprocess
+import tempfile
+from pathlib import Path
 
 
 class TsharkError(RuntimeError):
     """Raised when a tshark operation fails."""
+
+
+# Minimal valid empty pcap (global header only, Ethernet linktype) used to
+# let tshark compile display filters without needing a real capture file.
+_EMPTY_PCAP = struct.pack("<IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, 65535, 1)
 
 
 def _decode_output(raw: bytes) -> str:
@@ -32,6 +40,20 @@ class TsharkInterface:
     def is_available(self) -> bool:
         return shutil.which(self._binary_name) is not None
 
+    def check_display_filter(self, display_filter: str | None) -> None:
+        """Validate display-filter syntax via tshark before a real run.
+
+        Raises TsharkError for syntactically invalid filters. Silently skips
+        when tshark is unavailable or the filter is empty, so callers on
+        machines without tshark keep working.
+        """
+        if not display_filter or not self.is_available():
+            return
+        empty = Path(tempfile.gettempdir()) / "packetforge_empty.pcap"
+        if not empty.is_file():
+            empty.write_bytes(_EMPTY_PCAP)
+        self._run([self.binary, "-r", str(empty), "-Y", display_filter, "-c", "0"])
+
     def _run(self, args: list[str]) -> str:
         try:
             proc = subprocess.run(args, capture_output=True, timeout=60, shell=False)
@@ -46,14 +68,22 @@ class TsharkInterface:
         return _decode_output(proc.stdout)
 
     def _build_capture_cmd(
-        self, interface: str, count: int, bpf: str | None, timeout: int, fmt: str
+        self,
+        interface: str,
+        count: int,
+        bpf: str | None,
+        timeout: int,
+        fmt: str,
+        write_path: str | None = None,
     ) -> list[str]:
         cmd = [self.binary, "-i", interface, "-c", str(count)]
         if bpf:
             cmd += ["-f", bpf]
         if timeout:
             cmd += ["-a", f"duration:{timeout}"]
-        if fmt == "json":
+        if write_path:
+            cmd += ["-w", write_path]
+        elif fmt == "json":
             cmd += ["-T", "json"]
         else:
             cmd += ["-T", "text"]
@@ -70,9 +100,19 @@ class TsharkInterface:
         return cmd
 
     def capture_live(
-        self, interface: str, count: int, bpf: str | None, timeout: int, fmt: str
+        self,
+        interface: str,
+        count: int,
+        bpf: str | None,
+        timeout: int,
+        fmt: str,
+        write_path: str | None = None,
     ) -> str:
-        return self._run(self._build_capture_cmd(interface, count, bpf, timeout, fmt))
+        return self._run(
+            self._build_capture_cmd(
+                interface, count, bpf, timeout, fmt, write_path=write_path
+            )
+        )
 
     def analyze_pcap(
         self, filepath: str, display_filter: str | None, max_packets: int

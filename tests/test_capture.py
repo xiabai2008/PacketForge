@@ -53,7 +53,9 @@ def test_get_network_interfaces_error(monkeypatch):
 def test_capture_live_ok(monkeypatch):
     tools = make_tools()
     monkeypatch.setattr(
-        tools.tshark, "capture_live", lambda i, c, f, t, fmt: '{"packets": []}'
+        tools.tshark,
+        "capture_live",
+        lambda i, c, f, t, fmt, write_path=None: '{"packets": []}',
     )
     out = tools.capture_live(interface="eth0", count=10)
     assert out["status"] == "ok"
@@ -118,4 +120,28 @@ def test_get_protocol_statistics_error(monkeypatch, tmp_path):
         lambda f: (_ for _ in ()).throw(TsharkError("bad pcap")),
     )
     out = tools.get_protocol_statistics(str(p))
+    assert out["status"] == "error"
+
+
+def test_capture_live_saves_to_file(monkeypatch, tmp_path):
+    tools = make_tools()
+    seen = {}
+
+    def fake_capture(interface, count, bpf, timeout, fmt, write_path=None):
+        seen["write_path"] = write_path
+        return ""
+
+    monkeypatch.setattr(tools.tshark, "capture_live", fake_capture)
+    target = tmp_path / "saved.pcapng"
+    out = tools.capture_live(interface="eth0", count=10, save_to=str(target))
+    assert out["status"] == "ok"
+    assert out["data"]["saved_to"] == str(target.resolve())
+    assert seen["write_path"] == str(target.resolve())
+
+
+def test_capture_live_save_to_rejects_bad_extension(tmp_path):
+    tools = make_tools()
+    out = tools.capture_live(
+        interface="eth0", count=10, save_to=str(tmp_path / "x.exe")
+    )
     assert out["status"] == "error"

@@ -1,5 +1,6 @@
 """Tests for threat-intel tools."""
 
+import json
 import urllib.request
 
 from packetforge.core.audit import AuditLog
@@ -44,6 +45,61 @@ def test_no_key_degrades_gracefully(monkeypatch):
     out = itf.check_ip("8.8.8.8")
     assert out["status"] == "degraded"
     assert out["checked"] is False
+
+
+def test_abuseipdb_query_with_key(monkeypatch):
+
+    captured = {}
+
+    class FakeResp:
+        def read(self):
+            return json.dumps(
+                {"data": {"abuseConfidenceScore": 100, "totalReports": 7}}
+            ).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout=10, context=None):
+        captured["url"] = req.full_url
+        captured["key"] = req.headers.get("Key")
+        return FakeResp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface(abuseipdb_key="k1", urlhaus_host="http://invalid")
+    out = itf.check_ip("1.2.3.4")
+    assert out["abuseipdb"]["abuse_confidence_score"] == 100
+    assert out["abuseipdb"]["total_reports"] == 7
+    assert captured["key"] == "k1"
+    assert "api.abuseipdb.com" in captured["url"]
+
+
+def test_abuseipdb_no_key_skipped():
+    itf = ThreatIntelInterface(urlhaus_host="http://invalid")
+    out = itf.check_ip("1.2.3.4")
+    assert "abuseipdb" not in out
+
+
+def test_abuseipdb_failure_does_not_break_urlhaus(monkeypatch):
+    import urllib.error
+
+    calls = []
+
+    def fake_urlopen(req, timeout=10, context=None):
+        calls.append(req.full_url)
+        if "abuseipdb" in req.full_url:
+            raise urllib.error.URLError("network down")
+        raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", None, None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface(abuseipdb_key="k1", urlhaus_host="http://invalid")
+    out = itf.check_ip("1.2.3.4")
+    # urlhaus degraded but abuseipdb failure recorded without breaking flow
+    assert out["status"] == "degraded"
+    assert out["abuseipdb"]["checked"] is False
 
 
 def test_check_ip_threat_intel_ok(monkeypatch):

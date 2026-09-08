@@ -102,6 +102,38 @@ def test_nmap_quick_scan_ok(monkeypatch):
     assert out["status"] == "ok"
 
 
+def test_nmap_vulnerability_scan_ok(monkeypatch):
+    tools = NmapScanTools(audit=AuditLog(), limiter=RateLimiter())
+    monkeypatch.setattr(
+        tools.nmap, "vulnerability_scan", lambda t, p: "CVE-2021-44228 found"
+    )
+    out = tools.nmap_vulnerability_scan("127.0.0.1", "80,443")
+    assert out["status"] == "ok"
+    assert "CVE" in out["data"]["raw"]
+
+
+def test_nmap_vulnerability_scan_rejects_injection(monkeypatch):
+    tools = NmapScanTools(audit=AuditLog(), limiter=RateLimiter())
+    monkeypatch.setattr(
+        tools.nmap,
+        "vulnerability_scan",
+        lambda *a: (_ for _ in ()).throw(AssertionError("should not run")),
+    )
+    out = tools.nmap_vulnerability_scan("1.2.3.4; id", "80")
+    assert out["status"] == "error"
+
+
+def test_nmap_vulnerability_scan_rate_limited(monkeypatch):
+    tools = NmapScanTools(
+        audit=AuditLog(), limiter=RateLimiter(max_calls=1, window_seconds=60)
+    )
+    monkeypatch.setattr(tools.nmap, "vulnerability_scan", lambda t, p: "ok")
+    tools.nmap_vulnerability_scan("127.0.0.1", "80")
+    out = tools.nmap_vulnerability_scan("127.0.0.1", "80")
+    assert out["status"] == "error"
+    assert "rate" in out["error"].lower()
+
+
 def test_nmap_interface_run_missing_binary(monkeypatch):
     import subprocess
 

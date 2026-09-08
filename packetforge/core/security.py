@@ -2,6 +2,7 @@
 
 import ipaddress
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -94,20 +95,33 @@ def validate_file_path(path: str) -> str:
     return str(p)
 
 
+def validate_output_path(path: str) -> str:
+    """Validate a capture output path (extension whitelist, existing parent)."""
+    p = Path(path).resolve()
+    ext = p.suffix.lower()
+    if ext not in _PATH_ALLOWED_EXT:
+        raise SecurityError(f"Unsupported output file type: {ext!r}")
+    if not p.parent.is_dir():
+        raise SecurityError(f"Parent directory does not exist: {p.parent}")
+    return str(p)
+
+
 class RateLimiter:
-    """Token-bucket style rate limiter keyed by operation."""
+    """Token-bucket style rate limiter keyed by operation. Thread-safe."""
 
     def __init__(self, max_calls: int = 10, window_seconds: int = 3600):
         self.max_calls = max_calls
         self.window_seconds = window_seconds
         self._calls: dict[str, list[float]] = {}
+        self._lock = threading.Lock()
 
     def allow(self, key: str) -> bool:
         now = time.monotonic()
         cutoff = now - self.window_seconds
-        self._calls.setdefault(key, [])
-        self._calls[key] = [t for t in self._calls[key] if t > cutoff]
-        if len(self._calls[key]) >= self.max_calls:
-            return False
-        self._calls[key].append(now)
-        return True
+        with self._lock:
+            self._calls.setdefault(key, [])
+            self._calls[key] = [t for t in self._calls[key] if t > cutoff]
+            if len(self._calls[key]) >= self.max_calls:
+                return False
+            self._calls[key].append(now)
+            return True

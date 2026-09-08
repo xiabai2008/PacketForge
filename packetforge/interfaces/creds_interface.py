@@ -5,8 +5,10 @@ import re
 from typing import Any
 
 _HTTP_BASIC = re.compile(r"[Aa]uthorization:\s*[Bb]asic\s+([A-Za-z0-9+/=]+)")
-_FTP_USER = re.compile(r"\nUSER\s+(\S+)", re.IGNORECASE)
-_FTP_PASS = re.compile(r"\nPASS\s+(\S+)", re.IGNORECASE)
+_FTP_USER = re.compile(r"(?:^|\n)\s*USER\s+(\S+)", re.IGNORECASE)
+_FTP_PASS = re.compile(r"(?:^|\n)\s*PASS\s+(\S+)", re.IGNORECASE)
+_TELNET_USER = re.compile(r"(?:^|\n)\s*(?:login|username):\s*(\S+)", re.IGNORECASE)
+_TELNET_PASS = re.compile(r"(?:^|\n)\s*password:\s*(\S+)", re.IGNORECASE)
 
 
 def extract_credentials_from_text(text: str) -> list[dict[str, Any]]:
@@ -29,5 +31,11 @@ def extract_credentials_from_text(text: str) -> list[dict[str, Any]]:
     passes = _FTP_PASS.findall(text)
     for u, p in zip(users, passes):
         found.append({"type": "ftp", "user": u, "password": p})
+
+    # Telnet: login/username + password prompt pair
+    users = _TELNET_USER.findall(text)
+    passes = _TELNET_PASS.findall(text)
+    for u, p in zip(users, passes):
+        found.append({"type": "telnet", "user": u, "password": p})
 
     return found

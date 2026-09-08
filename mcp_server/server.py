@@ -1,5 +1,7 @@
 """FastMCP adapter exposing PacketForge tools to AI clients."""
 
+import argparse
+
 from fastmcp import FastMCP
 
 from mcp_server.prompts import register_prompts
@@ -67,6 +69,10 @@ def build_server() -> FastMCP:
         return nmap.nmap_service_detection(target, ports)
 
     @mcp.tool()
+    def nmap_vulnerability_scan(target: str, ports: str = "") -> dict:
+        return nmap.nmap_vulnerability_scan(target, ports)
+
+    @mcp.tool()
     def extract_credentials(filepath: str) -> dict:
         return creds.extract_credentials(filepath)
 
@@ -83,9 +89,26 @@ def build_server() -> FastMCP:
     return mcp
 
 
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="PacketForge MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http", "sse"],
+        default="stdio",
+        help="MCP transport (default: stdio for local clients)",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP bind host")
+    parser.add_argument("--port", type=int, default=8000, help="HTTP bind port")
+    return parser.parse_args(argv)
+
+
 def main() -> None:
+    args = parse_args()
     server = build_server()
-    server.run()
+    if args.transport == "stdio":
+        server.run()
+    else:
+        server.run(transport=args.transport, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
