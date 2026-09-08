@@ -35,26 +35,34 @@ def parse_nmap_xml(xml_text: str) -> dict[str, Any] | None:
         for p in h.iter("port"):
             state_el = p.find("state")
             svc_el = p.find("service")
-            ports.append(
-                {
-                    "port": int(p.get("portid", "0")),
-                    "protocol": p.get("protocol", "tcp"),
-                    "state": state_el.get("state") if state_el is not None else None,
-                    "service": svc_el.get("name") if svc_el is not None else None,
-                    "product": svc_el.get("product") if svc_el is not None else None,
-                    "version": svc_el.get("version") if svc_el is not None else None,
-                }
-            )
-        hosts.append(
-            {
-                "ip": addr.get("addr") if addr is not None else None,
-                "hostname": hostname_el.get("name")
-                if hostname_el is not None
-                else None,
-                "status": status_el.get("state") if status_el is not None else None,
-                "ports": ports,
+            entry = {
+                "port": int(p.get("portid", "0")),
+                "protocol": p.get("protocol", "tcp"),
+                "state": state_el.get("state") if state_el is not None else None,
+                "service": svc_el.get("name") if svc_el is not None else None,
+                "product": svc_el.get("product") if svc_el is not None else None,
+                "version": svc_el.get("version") if svc_el is not None else None,
             }
-        )
+            port_scripts = [
+                {"id": s.get("id", ""), "output": s.get("output", "")}
+                for s in p.findall("script")
+            ]
+            if port_scripts:
+                entry["scripts"] = port_scripts
+            ports.append(entry)
+        host_entry = {
+            "ip": addr.get("addr") if addr is not None else None,
+            "hostname": hostname_el.get("name") if hostname_el is not None else None,
+            "status": status_el.get("state") if status_el is not None else None,
+            "ports": ports,
+        }
+        host_scripts = [
+            {"id": s.get("id", ""), "output": s.get("output", "")}
+            for s in h.findall("script")
+        ]
+        if host_scripts:
+            host_entry["scripts"] = host_scripts
+        hosts.append(host_entry)
 
     runstats_el = root.find("runstats/hosts")
     runstats = (
@@ -131,9 +139,19 @@ class NmapInterface:
         return self._run(self.nse_scan_cmd(target, ports, scripts))
 
     def quick_scan(self, target: str) -> str:
-        return self._run([self.binary, "-F", target])
+        return self._run([self.binary, "-F", "-oX", "-", target])
 
     def comprehensive_scan(self, target: str) -> str:
         return self._run(
-            [self.binary, "-sS", "-sV", "-O", "--script", "default,vuln", target]
+            [
+                self.binary,
+                "-sS",
+                "-sV",
+                "-O",
+                "--script",
+                "default,vuln",
+                "-oX",
+                "-",
+                target,
+            ]
         )

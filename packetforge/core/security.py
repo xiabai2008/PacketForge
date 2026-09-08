@@ -112,11 +112,16 @@ def validate_file_path(path: str) -> str:
     return str(p)
 
 
-def validate_output_path(path: str) -> str:
-    """Validate a capture output path (extension whitelist, existing parent)."""
+def validate_output_path(path: str, allowed_exts: set[str] | None = None) -> str:
+    """Validate an output path (extension whitelist, existing parent).
+
+    Defaults to capture-file extensions; callers persisting other artifact
+    types (e.g. JSON audit reports) pass their own whitelist.
+    """
     p = Path(path).resolve()
     ext = p.suffix.lower()
-    if ext not in _PATH_ALLOWED_EXT:
+    allowed = allowed_exts if allowed_exts is not None else _PATH_ALLOWED_EXT
+    if ext not in allowed:
         raise SecurityError(f"Unsupported output file type: {ext!r}")
     if not p.parent.is_dir():
         raise SecurityError(f"Parent directory does not exist: {p.parent}")

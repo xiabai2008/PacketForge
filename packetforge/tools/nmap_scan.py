@@ -88,7 +88,7 @@ class NmapScanTools:
             validate_ip_or_cidr(target)
             raw = self.nmap.os_detection(target)
             aid = self.audit.record("nmap_os_detection", {"target": target})
-            return format_result("nmap_os_detection", {"raw": raw}, aid)
+            return format_result("nmap_os_detection", self._with_structured(raw), aid)
         except Exception as e:
             aid = self.audit.record("nmap_os_detection_error", {"error": str(e)})
             return format_error("nmap_os_detection", str(e), aid)
@@ -104,7 +104,7 @@ class NmapScanTools:
             validate_ip_or_cidr(target)
             raw = self.nmap.quick_scan(target)
             aid = self.audit.record("nmap_quick_scan", {"target": target})
-            return format_result("nmap_quick_scan", {"raw": raw}, aid)
+            return format_result("nmap_quick_scan", self._with_structured(raw), aid)
         except Exception as e:
             aid = self.audit.record("nmap_quick_scan_error", {"error": str(e)})
             return format_error("nmap_quick_scan", str(e), aid)
@@ -124,7 +124,9 @@ class NmapScanTools:
             aid = self.audit.record(
                 "nmap_vulnerability_scan", {"target": target, "ports": ports}
             )
-            return format_result("nmap_vulnerability_scan", {"raw": raw}, aid)
+            return format_result(
+                "nmap_vulnerability_scan", self._with_structured(raw), aid
+            )
         except Exception as e:
             aid = self.audit.record("nmap_vulnerability_scan_error", {"error": str(e)})
             return format_error("nmap_vulnerability_scan", str(e), aid)

@@ -51,6 +51,36 @@ def test_parse_nmap_xml_invalid_returns_none():
     assert parse_nmap_xml("<other><tag/></other>") is None
 
 
+def test_parse_nmap_xml_script_output():
+    xml = """<?xml version="1.0"?>
+<nmaprun>
+<host>
+<status state="up"/>
+<address addr="1.2.3.4" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="80">
+<state state="open"/>
+<service name="http"/>
+<script id="http-title" output="Welcome to nginx!"/>
+</port>
+</ports>
+<script id="nbstat" output="NetBIOS name: SRV1"/>
+</host>
+</nmaprun>
+"""
+    out = parse_nmap_xml(xml)
+    port = out["hosts"][0]["ports"][0]
+    assert port["scripts"] == [{"id": "http-title", "output": "Welcome to nginx!"}]
+    host_scripts = out["hosts"][0]["scripts"]
+    assert host_scripts == [{"id": "nbstat", "output": "NetBIOS name: SRV1"}]
+
+
+def test_parse_nmap_xml_no_scripts_field_when_absent():
+    out = parse_nmap_xml(SAMPLE_XML)
+    assert "scripts" not in out["hosts"][0]
+    assert "scripts" not in out["hosts"][0]["ports"][0]
+
+
 def test_port_scan_returns_structured(monkeypatch):
     from packetforge.core.audit import AuditLog
     from packetforge.core.security import RateLimiter

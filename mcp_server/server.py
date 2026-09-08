@@ -1,13 +1,16 @@
 """FastMCP adapter exposing PacketForge tools to AI clients."""
 
 import argparse
+import json
+from pathlib import Path
 
 from fastmcp import FastMCP
 
 from mcp_server.prompts import register_prompts
 from mcp_server.resources import register_resources
 from packetforge.core.audit import AuditLog
-from packetforge.core.security import RateLimiter
+from packetforge.core.output_formatter import format_error, format_result
+from packetforge.core.security import RateLimiter, validate_output_path
 from packetforge.tools.capture import CaptureTools
 from packetforge.tools.creds import CredsTools
 from packetforge.tools.export import ExportTools
@@ -87,6 +90,25 @@ def build_server() -> FastMCP:
     @mcp.tool()
     def scan_capture_for_threats(filepath: str) -> dict:
         return threat.scan_capture_for_threats(filepath)
+
+    @mcp.tool()
+    def save_audit_report(filepath: str) -> dict:
+        """Export the audit hash-chain compliance report to a JSON file."""
+        try:
+            path = validate_output_path(filepath, allowed_exts={".json"})
+            report = audit.report()
+            Path(path).write_text(
+                json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            aid = audit.record("save_audit_report", {"filepath": path})
+            return format_result(
+                "save_audit_report",
+                {"saved_to": path, "entry_count": report["entry_count"]},
+                aid,
+            )
+        except Exception as e:
+            aid = audit.record("save_audit_report_error", {"error": str(e)})
+            return format_error("save_audit_report", str(e), aid)
 
     register_resources(mcp, audit)
     register_prompts(mcp)
