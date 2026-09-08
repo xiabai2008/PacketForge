@@ -51,7 +51,10 @@ python -m mcp_server.server
 `get_protocol_statistics`、`follow_tcp_stream`、`export_packets_json`、`nmap_port_scan`、
 `nmap_service_detection`、`nmap_vulnerability_scan`、`extract_credentials`、
 `check_ip_threat_intel`、`scan_capture_for_threats`。
-另有资源 `network://help` 与提示词 `security_audit` / `incident_response`。
+Nmap 扫描结果自动解析为结构化 JSON（hosts/ports/service/version，`-oX` XML）；
+威胁情报查询返回合并判定 `verdict`（`malicious` / `clean` / `degraded`）。
+资源：`network://help` 与 `audit://report`（实时审计合规报告）；
+提示词：`security_audit` / `incident_response`。
 
 传输方式：默认 stdio（`python -m mcp_server.server`），支持远程部署
 `python -m mcp_server.server --transport http --host 0.0.0.0 --port 8000`。

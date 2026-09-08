@@ -1,6 +1,7 @@
 """Tests for MCP server registration."""
 
 import asyncio
+import json
 
 from mcp_server.server import build_server, parse_args
 
@@ -15,6 +16,23 @@ def test_build_server_registers_tools():
     assert "nmap_vulnerability_scan" in names
     assert "extract_credentials" in names
     assert "check_ip_threat_intel" in names
+
+
+def test_audit_report_resource_registered():
+    mcp = build_server()
+    resources = asyncio.run(mcp.list_resources())
+    uris = {str(r.uri) for r in resources}
+    assert "audit://report" in uris
+    assert "network://help" in uris
+
+
+def test_audit_report_resource_readable():
+    mcp = build_server()
+    content = asyncio.run(mcp.read_resource("audit://report"))
+    text = content.contents[0].content
+    payload = json.loads(text)
+    assert payload["chain_valid"] is True
+    assert payload["entry_count"] == 0
 
 
 def test_parse_args_defaults_to_stdio():

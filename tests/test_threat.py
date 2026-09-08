@@ -102,6 +102,70 @@ def test_abuseipdb_failure_does_not_break_urlhaus(monkeypatch):
     assert out["abuseipdb"]["checked"] is False
 
 
+def _fake_json_resp(payload):
+    import io
+    import urllib.response
+
+    body = json.dumps(payload).encode()
+    return urllib.response.addinfourl(
+        io.BytesIO(body),
+        headers={"Content-Type": "application/json"},
+        url="mock",
+        code=200,
+    )
+
+
+def test_verdict_clean_when_no_hits(monkeypatch):
+    def fake_urlopen(req, timeout=10, context=None):
+        if "abuseipdb" in req.full_url:
+            return _fake_json_resp(
+                {"data": {"abuseConfidenceScore": 0, "totalReports": 0}}
+            )
+        return _fake_json_resp({"query_status": "no_results"})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface(abuseipdb_key="k1")
+    out = itf.check_ip("1.2.3.4")
+    assert out["verdict"] == "clean"
+    assert out["sources"] == ["urlhaus", "abuseipdb"]
+
+
+def test_verdict_malicious_from_urlhaus(monkeypatch):
+    def fake_urlopen(req, timeout=10, context=None):
+        return _fake_json_resp({"query_status": "ok"})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface()
+    out = itf.check_ip("1.2.3.4")
+    assert out["verdict"] == "malicious"
+
+
+def test_verdict_malicious_from_abuseipdb(monkeypatch):
+    def fake_urlopen(req, timeout=10, context=None):
+        if "abuseipdb" in req.full_url:
+            return _fake_json_resp(
+                {"data": {"abuseConfidenceScore": 75, "totalReports": 9}}
+            )
+        return _fake_json_resp({"query_status": "no_results"})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface(abuseipdb_key="k1")
+    out = itf.check_ip("1.2.3.4")
+    assert out["verdict"] == "malicious"
+
+
+def test_verdict_degraded_when_all_sources_fail(monkeypatch):
+    import urllib.error
+
+    def fake_urlopen(req, timeout=10, context=None):
+        raise urllib.error.URLError("offline")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    itf = ThreatIntelInterface(abuseipdb_key="k1")
+    out = itf.check_ip("1.2.3.4")
+    assert out["verdict"] == "degraded"
+
+
 def test_check_ip_threat_intel_ok(monkeypatch):
     tools = ThreatTools(audit=AuditLog())
     monkeypatch.setattr(

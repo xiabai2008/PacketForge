@@ -84,7 +84,7 @@ def build_server() -> FastMCP:
     def scan_capture_for_threats(filepath: str) -> dict:
         return threat.scan_capture_for_threats(filepath)
 
-    register_resources(mcp)
+    register_resources(mcp, audit)
     register_prompts(mcp)
     return mcp
 

@@ -1,12 +1,68 @@
-"""Nmap wrapper. Reuses the rayscan scan base in the workspace."""
+"""Nmap wrapper for active scanning."""
 
 import locale
 import shutil
 import subprocess
+import xml.etree.ElementTree as ET
+from typing import Any
 
 
 class NmapError(RuntimeError):
     """Raised when an nmap operation fails."""
+
+
+def parse_nmap_xml(xml_text: str) -> dict[str, Any] | None:
+    """Parse Nmap XML output (-oX -) into a structured dict.
+
+    Returns None when the text is not Nmap XML, so callers can fall back to
+    the raw output instead of failing.
+    """
+    if not xml_text or "<nmaprun" not in xml_text:
+        return None
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return None
+    if root.tag != "nmaprun":
+        return None
+
+    hosts: list[dict[str, Any]] = []
+    for h in root.iter("host"):
+        status_el = h.find("status")
+        addr = h.find("address[@addrtype='ipv4']")
+        hostname_el = h.find("hostnames/hostname")
+        ports: list[dict[str, Any]] = []
+        for p in h.iter("port"):
+            state_el = p.find("state")
+            svc_el = p.find("service")
+            ports.append(
+                {
+                    "port": int(p.get("portid", "0")),
+                    "protocol": p.get("protocol", "tcp"),
+                    "state": state_el.get("state") if state_el is not None else None,
+                    "service": svc_el.get("name") if svc_el is not None else None,
+                    "product": svc_el.get("product") if svc_el is not None else None,
+                    "version": svc_el.get("version") if svc_el is not None else None,
+                }
+            )
+        hosts.append(
+            {
+                "ip": addr.get("addr") if addr is not None else None,
+                "hostname": hostname_el.get("name")
+                if hostname_el is not None
+                else None,
+                "status": status_el.get("state") if status_el is not None else None,
+                "ports": ports,
+            }
+        )
+
+    runstats_el = root.find("runstats/hosts")
+    runstats = (
+        {k: int(runstats_el.get(k, "0")) for k in ("up", "down", "total")}
+        if runstats_el is not None
+        else {}
+    )
+    return {"hosts": hosts, "runstats": runstats}
 
 
 def _decode_output(raw: bytes) -> str:
@@ -52,13 +108,15 @@ class NmapInterface:
         return cmd
 
     def port_scan(self, target: str, ports: str, scan_type: str) -> str:
-        return self._run(self._build_scan_cmd(target, ports, scan_type))
+        return self._run(
+            self._build_scan_cmd(target, ports, scan_type, extra=["-oX", "-"])
+        )
 
     def service_detection(self, target: str, ports: str) -> str:
-        return self._run([self.binary, "-sV", "-p", ports, target])
+        return self._run([self.binary, "-sV", "-oX", "-", "-p", ports, target])
 
     def os_detection(self, target: str) -> str:
-        return self._run([self.binary, "-O", target])
+        return self._run([self.binary, "-O", "-oX", "-", target])
 
     def vulnerability_scan(self, target: str, ports: str) -> str:
         return self._run([self.binary, "--script", "vuln", "-p", ports, target])

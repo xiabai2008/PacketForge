@@ -7,7 +7,7 @@ from packetforge.core.security import (
     validate_ip_or_cidr,
     validate_port_spec,
 )
-from packetforge.interfaces.nmap_interface import NmapInterface
+from packetforge.interfaces.nmap_interface import NmapInterface, parse_nmap_xml
 
 
 class NmapScanTools:
@@ -22,6 +22,15 @@ class NmapScanTools:
 
     def _guard(self) -> bool:
         return self.limiter.allow("nmap")
+
+    @staticmethod
+    def _with_structured(raw: str) -> dict:
+        """Build result data: structured hosts when output is Nmap XML."""
+        data: dict = {"raw": raw}
+        structured = parse_nmap_xml(raw)
+        if structured is not None:
+            data["structured"] = structured
+        return data
 
     def nmap_port_scan(
         self, target: str, ports: str = "1-1000", scan_type: str = "connect"
@@ -40,7 +49,7 @@ class NmapScanTools:
                 "nmap_port_scan",
                 {"target": target, "ports": ports, "scan_type": scan_type},
             )
-            return format_result("nmap_port_scan", {"raw": raw}, aid)
+            return format_result("nmap_port_scan", self._with_structured(raw), aid)
         except Exception as e:
             aid = self.audit.record("nmap_port_scan_error", {"error": str(e)})
             return format_error("nmap_port_scan", str(e), aid)
@@ -60,7 +69,9 @@ class NmapScanTools:
             aid = self.audit.record(
                 "nmap_service_detection", {"target": target, "ports": ports}
             )
-            return format_result("nmap_service_detection", {"raw": raw}, aid)
+            return format_result(
+                "nmap_service_detection", self._with_structured(raw), aid
+            )
         except Exception as e:
             aid = self.audit.record("nmap_service_detection_error", {"error": str(e)})
             return format_error("nmap_service_detection", str(e), aid)

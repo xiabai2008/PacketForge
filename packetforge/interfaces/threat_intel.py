@@ -10,6 +10,29 @@ from typing import Any
 _URLHAUS_HOST = "https://urlhaus-api.abuse.ch/v1/host/"
 _ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
 
+# AbuseIPDB confidence score at or above this is treated as malicious
+_ABUSEIPDB_MALICIOUS_THRESHOLD = 50
+
+
+def _compute_verdict(result: dict[str, Any]) -> str:
+    """Merge per-source verdicts into one of: malicious / clean / degraded."""
+    verdicts: list[str] = []
+    urlhaus = result.get("urlhaus")
+    if urlhaus is not None:
+        verdicts.append("malicious" if urlhaus == "ok" else "clean")
+    abuse = result.get("abuseipdb")
+    if abuse and abuse.get("checked"):
+        score = abuse.get("abuse_confidence_score")
+        if score is None:
+            verdicts.append("clean")
+        else:
+            verdicts.append(
+                "malicious" if score >= _ABUSEIPDB_MALICIOUS_THRESHOLD else "clean"
+            )
+    if not verdicts:
+        return "degraded"
+    return "malicious" if "malicious" in verdicts else "clean"
+
 
 def _default_ssl_context() -> ssl.SSLContext:
     """SSL context with a CA bundle that works on stock Windows Python."""
@@ -53,7 +76,17 @@ class ThreatIntelInterface:
         abuse = self._query_abuseipdb(ip)
         if abuse is not None:
             result["abuseipdb"] = abuse
+        result["sources"] = self.sources
+        result["verdict"] = _compute_verdict(result)
         return result
+
+    @property
+    def sources(self) -> list[str]:
+        """Names of the currently enabled intelligence sources."""
+        names = ["urlhaus"]
+        if self.abuseipdb_key:
+            names.append("abuseipdb")
+        return names
 
     def _query(self, ip: str) -> dict[str, Any]:
         payload = json.dumps({"host": ip}).encode("utf-8")

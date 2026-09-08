@@ -17,6 +17,9 @@ priorities; the authoritative design doc lives in `docs/specs/`.
 
 ## Next (near-term)
 
+- [x] Structured Nmap output (`-oX -` → parsed JSON) — shipped.
+- [x] Pluggable intel verdict merging (`verdict` + `sources` in check_ip) — shipped.
+- [x] Audit report exposed via MCP resource `audit://report` — shipped.
 - [ ] **Poxiao / RayScan adapter review** — the original design assumed
       Nmap and URLhaus/AbuseIPDB APIs in those bases; investigation showed
       they are a web-vuln scanner (`wvs`) and an SRC recon pipeline (`src`)
@@ -24,9 +27,8 @@ priorities; the authoritative design doc lives in `docs/specs/`.
       optional IP-enrichment source and RayScan's `WAVScanner` for web-vuln
       follow-up after Nmap service discovery (both optional imports).
 - [ ] Pluggable intel sources: registry of feeds (URLhaus, AbuseIPDB,
-      local blocklists) with unified verdict merging.
-- [ ] Audit report export to file/JSON artifact via an MCP resource.
-- [ ] Structured Nmap output (`-oX -` → parsed JSON) instead of raw text.
+      local blocklists) with a `Source` protocol for third-party feeds.
+- [ ] Audit report export to file/JSON artifact via an MCP tool.
 
 ## Later
 
