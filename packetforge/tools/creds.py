@@ -37,15 +37,21 @@ class CredsTools:
                     except ValueError:
                         continue
             creds = extract_credentials_from_text(text)
-            # Never echo raw passwords directly to LLM; report presence + redacted
-            redacted = [
-                {
+            # Never echo raw passwords directly to LLM; report presence + redacted.
+            # Non-credential auth-scheme entries (http_digest/http_ntlm) keep
+            # their metadata fields (realm/nonce/challenge) since they contain
+            # no secrets.
+            redacted = []
+            for c in creds:
+                entry = {
                     "type": c["type"],
                     "user": c["user"],
                     "password": "***" if c["password"] else "",
                 }
-                for c in creds
-            ]
+                for key in ("realm", "nonce", "challenge_present"):
+                    if key in c:
+                        entry[key] = c[key]
+                redacted.append(entry)
             aid = self.audit.record(
                 "extract_credentials", {"filepath": path, "found": len(creds)}
             )

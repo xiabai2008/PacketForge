@@ -119,7 +119,16 @@ class NmapInterface:
         return self._run([self.binary, "-O", "-oX", "-", target])
 
     def vulnerability_scan(self, target: str, ports: str) -> str:
-        return self._run([self.binary, "--script", "vuln", "-p", ports, target])
+        return self._run(
+            [self.binary, "--script", "vuln", "-oX", "-", "-p", ports, target]
+        )
+
+    def nse_scan_cmd(self, target: str, ports: str, scripts: str) -> list[str]:
+        """Build the argv for an NSE script scan (exposed for tests)."""
+        return [self.binary, "--script", scripts, "-oX", "-", "-p", ports, target]
+
+    def nse_scan(self, target: str, ports: str, scripts: str) -> str:
+        return self._run(self.nse_scan_cmd(target, ports, scripts))
 
     def quick_scan(self, target: str) -> str:
         return self._run([self.binary, "-F", target])

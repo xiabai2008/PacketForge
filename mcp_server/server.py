@@ -73,6 +73,10 @@ def build_server() -> FastMCP:
         return nmap.nmap_vulnerability_scan(target, ports)
 
     @mcp.tool()
+    def nmap_nse_scan(target: str, ports: str = "", scripts: str = "default") -> dict:
+        return nmap.nmap_nse_scan(target, ports, scripts)
+
+    @mcp.tool()
     def extract_credentials(filepath: str) -> dict:
         return creds.extract_credentials(filepath)
 

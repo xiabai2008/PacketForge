@@ -24,6 +24,23 @@ _FQDN = re.compile(
 # Safety cap on expanded port lists (avoids accidental broad scans)
 _MAX_EXPANDED_PORTS = 5
 
+# NSE script spec: script names, categories, globs, and "or" combinations
+_NSE_ALLOWED = re.compile(r"^[A-Za-z0-9_.*,\s\-/]+$")
+
+
+def validate_nse_script_spec(spec: str) -> str:
+    """Validate an NSE --script argument (names, categories, globs).
+
+    Rejects shell metacharacters and --script-args style injection; the
+    value is still passed as a single argv entry (shell=False), this is
+    defense in depth against nmap interpreting unexpected arguments.
+    """
+    if not spec:
+        raise SecurityError("NSE script spec is empty")
+    if _NSE_ALLOWED.fullmatch(spec) is None:
+        raise SecurityError(f"Invalid NSE script spec: {spec!r}")
+    return spec
+
 
 def validate_ip_or_cidr(target: str) -> str:
     """Validate an IP, CIDR, or FQDN hostname. Rejects shell metacharacters."""

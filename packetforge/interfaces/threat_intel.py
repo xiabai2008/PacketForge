@@ -5,7 +5,7 @@ import json
 import ssl
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 _URLHAUS_HOST = "https://urlhaus-api.abuse.ch/v1/host/"
 _ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
@@ -13,9 +13,40 @@ _ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
 # AbuseIPDB confidence score at or above this is treated as malicious
 _ABUSEIPDB_MALICIOUS_THRESHOLD = 50
 
+# Keys of the check_ip result that are not per-source verdict dicts
+_FIXED_RESULT_KEYS = {
+    "status",
+    "ip",
+    "error",
+    "checked",
+    "urlhaus",
+    "abuseipdb",
+    "sources",
+    "verdict",
+}
+
+
+@runtime_checkable
+class IntelSource(Protocol):
+    """Protocol for third-party intelligence feeds.
+
+    Implementations provide ``name`` and ``check(ip) -> dict`` where the
+    result dict contains at least ``status`` ("ok" | "degraded") and a
+    tri-state ``malicious`` (True | False | None when unknown). Failures
+    should be reported in the dict, not raised, when possible.
+    """
+
+    name: str
+
+    def check(self, ip: str) -> dict[str, Any]: ...
+
 
 def _compute_verdict(result: dict[str, Any]) -> str:
-    """Merge per-source verdicts into one of: malicious / clean / degraded."""
+    """Merge per-source verdicts into one of: malicious / clean / degraded.
+
+    Built-in rules cover URLhaus and AbuseIPDB; any extra ``IntelSource``
+    result dict carrying a tri-state ``malicious`` field participates too.
+    """
     verdicts: list[str] = []
     urlhaus = result.get("urlhaus")
     if urlhaus is not None:
@@ -29,6 +60,16 @@ def _compute_verdict(result: dict[str, Any]) -> str:
             verdicts.append(
                 "malicious" if score >= _ABUSEIPDB_MALICIOUS_THRESHOLD else "clean"
             )
+    for key, value in result.items():
+        if key in _FIXED_RESULT_KEYS or not isinstance(value, dict):
+            continue
+        if value.get("checked") is False:
+            continue
+        malicious = value.get("malicious")
+        if malicious is True:
+            verdicts.append("malicious")
+        elif malicious is False:
+            verdicts.append("clean")
     if not verdicts:
         return "degraded"
     return "malicious" if "malicious" in verdicts else "clean"
@@ -59,10 +100,12 @@ class ThreatIntelInterface:
         abuseipdb_key: str = "",
         urlhaus_host: str = _URLHAUS_HOST,
         urlhaus_key: str = "",
+        extra_sources: list[IntelSource] | None = None,
     ) -> None:
         self.abuseipdb_key = abuseipdb_key
         self.urlhaus_host = urlhaus_host
         self.urlhaus_key = urlhaus_key
+        self.extra_sources = list(extra_sources) if extra_sources else []
 
     def urlhaus_query_url(self) -> str:
         return self.urlhaus_host
@@ -76,6 +119,16 @@ class ThreatIntelInterface:
         abuse = self._query_abuseipdb(ip)
         if abuse is not None:
             result["abuseipdb"] = abuse
+        for source in self.extra_sources:
+            try:
+                result[source.name] = source.check(ip)
+            except Exception as e:
+                # third-party sources must never break the main flow
+                result[source.name] = {
+                    "status": "degraded",
+                    "checked": False,
+                    "error": str(e),
+                }
         result["sources"] = self.sources
         result["verdict"] = _compute_verdict(result)
         return result
@@ -86,6 +139,7 @@ class ThreatIntelInterface:
         names = ["urlhaus"]
         if self.abuseipdb_key:
             names.append("abuseipdb")
+        names.extend(s.name for s in self.extra_sources)
         return names
 
     def _query(self, ip: str) -> dict[str, Any]:
