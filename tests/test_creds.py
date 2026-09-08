@@ -112,9 +112,7 @@ def test_creds_tools_digest_metadata_kept(monkeypatch, tmp_path):
     p = tmp_path / "a.pcap"
     p.write_bytes(b"x" * 24)
     tools = CredsTools(audit=AuditLog())
-    payload = (
-        'WWW-Authenticate: Digest realm="Area", nonce="abc123", qop="auth"'
-    ).encode("utf-8")
+    payload = b'WWW-Authenticate: Digest realm="Area", nonce="abc123", qop="auth"'
     monkeypatch.setattr(tools.tshark, "_run", lambda cmd: payload.hex())
     out = tools.extract_credentials(str(p))
     cred = out["data"]["credentials"][0]
