@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "packetforge"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI network analysis tool library + MCP server for authorized penetration testing"
 readme = "README.md"
 requires-python = ">=3.11"

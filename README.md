@@ -47,12 +47,14 @@ python -m mcp_server.server
 # 在 Claude Desktop / Cursor 的 MCP 配置中指向该命令
 ```
 
-注册的工具（11 个）：`capture_live`（支持 `save_to` 落盘）、`analyze_pcap_file`、
+注册的工具（13 个）：`capture_live`（支持 `save_to` 落盘）、`analyze_pcap_file`、
 `get_protocol_statistics`、`follow_tcp_stream`、`export_packets_json`、`nmap_port_scan`、
-`nmap_service_detection`、`nmap_vulnerability_scan`、`extract_credentials`、
-`check_ip_threat_intel`、`scan_capture_for_threats`。
-Nmap 扫描结果自动解析为结构化 JSON（hosts/ports/service/version，`-oX` XML）；
-威胁情报查询返回合并判定 `verdict`（`malicious` / `clean` / `degraded`）。
+`nmap_service_detection`、`nmap_vulnerability_scan`、`nmap_nse_scan`（NSE 脚本/类别/glob）、
+`extract_credentials`（Basic/FTP/Telnet/Digest/NTLM 检测）、`check_ip_threat_intel`、
+`scan_capture_for_threats`、`save_audit_report`（审计报告 JSON 导出）。
+Nmap 结果自动解析为结构化 JSON（含 NSE `scripts` 输出）；情报查询返回合并判定
+`verdict`（`malicious` / `clean` / `degraded`），支持自定义 `IntelSource` 源（含
+poxiao IP 富化适配器，可选）。
 资源：`network://help` 与 `audit://report`（实时审计合规报告）；
 提示词：`security_audit` / `incident_response`。
 

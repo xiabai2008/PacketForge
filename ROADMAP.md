@@ -17,18 +17,16 @@ priorities; the authoritative design doc lives in `docs/specs/`.
 
 ## Next (near-term)
 
-- [x] Structured Nmap output (`-oX -` → parsed JSON) — shipped.
+- [x] Structured Nmap output (`-oX -` → parsed JSON) — shipped (all scan tools).
 - [x] Pluggable intel verdict merging (`verdict` + `sources` in check_ip) — shipped.
-- [x] Audit report exposed via MCP resource `audit://report` — shipped.
-- [ ] **Poxiao / RayScan adapter review** — the original design assumed
-      Nmap and URLhaus/AbuseIPDB APIs in those bases; investigation showed
-      they are a web-vuln scanner (`wvs`) and an SRC recon pipeline (`src`)
-      respectively. Evaluate integrating poxiao's `IPCollector` as an
-      optional IP-enrichment source and RayScan's `WAVScanner` for web-vuln
-      follow-up after Nmap service discovery (both optional imports).
-- [ ] Pluggable intel sources: registry of feeds (URLhaus, AbuseIPDB,
-      local blocklists) with a `Source` protocol for third-party feeds.
-- [ ] Audit report export to file/JSON artifact via an MCP tool.
+- [x] IntelSource protocol for third-party feeds — shipped.
+- [x] Audit report exposed via MCP resource `audit://report` + `save_audit_report` tool — shipped.
+- [x] NSE script scanning (`nmap_nse_scan`) with script-spec validation — shipped.
+- [x] Poxiao IP-enrichment adapter (`PoxiaoIPSource`, optional) — shipped.
+- [ ] RayScan `WAVScanner` web-vuln follow-up after Nmap service discovery
+      (optional import; see design-doc correction below).
+- [ ] Local blocklist / file-based feed loader as a ready-made IntelSource.
+- [ ] NSE script catalog helper (list available scripts from the local nmap install).
 
 ## Later
 
