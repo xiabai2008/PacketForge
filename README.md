@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-**English** | [中文](#中文文档)
+**English** | [中文](#中文文档) · ⭐ [Star it](https://github.com/xiabai2008/PacketForge) if it helps! · 有帮助请点个 Star ⭐
 
 ---
 
@@ -122,6 +122,12 @@ CI runs lint, format, coverage gate, and packaging on Python 3.11-3.13.
 - [Implementation plan](docs/plans/2026-08-10-packetforge-implementation.md) (Chinese)
 - [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Code of Conduct](CODE_OF_CONDUCT.md)
 
+### Support the project
+
+If PacketForge helps your authorized testing workflow, please consider giving
+it a ⭐ **star** — it helps others discover the project. Issues and PRs are
+welcome.
+
 ### License
 
 MIT — see [LICENSE](LICENSE).
@@ -231,6 +237,11 @@ ruff format --check packetforge mcp_server tests
 - [设计文档](docs/specs/2026-08-10-packetforge-design.md)
 - [实现计划](docs/plans/2026-08-10-packetforge-implementation.md)
 - [路线图](ROADMAP.md) · [贡献指南](CONTRIBUTING.md) · [安全政策](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md)
+
+### 支持项目
+
+如果 PacketForge 对你的授权测试工作有帮助，欢迎点一个 ⭐ **Star**
+支持一下，让更多人发现这个项目；也欢迎提 Issue 和 PR。
 
 ### 许可证
 
