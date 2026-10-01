@@ -1,5 +1,10 @@
 # Contributor Covenant Code of Conduct
 
+> **中文说明**：本行为准则采用 Contributor Covenant v2.1，官方简体中文译本见
+> https://www.contributor-covenant.org/zh-cn/version/2/1/code_of_conduct/
+> 我们致力于为所有参与者提供无骚扰的友好环境；不可接受的行为可通过
+> 维护者渠道举报。
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our

@@ -1,5 +1,12 @@
 # Contributing to PacketForge
 
+> **中文摘要**：欢迎贡献！请先阅读 `docs/` 中的设计文档与实现计划。
+> 开发流程：先建 issue → fork 分支 → 按 TDD（先失败测试后最小实现）；
+> 核心安全模块（`core/security.py`、`core/audit.py`）覆盖率必须 ≥90%，
+> 全局覆盖率门槛 85%；提交前本地跑通 `pytest` 与 `ruff check`/`ruff format`。
+> 任何削弱内置安全控制（输入校验、限速、审计链）的改动不会被接受。
+> 切勿提交密钥或抓包文件。完整要求见下方英文正文。
+
 Thanks for your interest in contributing. PacketForge is a network-analysis
 tool library + MCP server for **authorized** penetration testing. Before you
 start, please read the design doc and implementation plan in `docs/`.

@@ -1,5 +1,11 @@
 # Security Policy
 
+> **中文摘要**：安全漏洞请勿公开提 issue，改用 GitHub 私密安全公告
+> （Security Advisories）或通过维护者 GitHub 主页邮箱私信报告；
+> 5 个工作日内确认、10 个工作日内首次回应。修复发布前保密，修复后
+> 发布安全公告。本工具仅限授权测试使用，内置安全控制不得削弱。
+> 完整政策见下方英文正文。
+
 ## Supported versions
 
 | Version | Supported          |
